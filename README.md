@@ -4,7 +4,9 @@
 
 ### Premium file sharing at the speed of thought.
 
-Drag, drop, and get a beautiful shareable link in under a second.
+Drag, drop, and get a beautiful shareable link in under a second.  
+Now with AI-powered document analysis and grounded Q&A.
+
 Password-protect, set expiry dates, generate QR codes — all wrapped in a cinematic Midnight Indigo UI.
 
 **Crafted by [Shivam Rai](https://techwithshivam.in/)**
@@ -27,6 +29,8 @@ Password-protect, set expiry dates, generate QR codes — all wrapped in a cinem
 - 🔗 **Beautiful share links** — short URLs + instant QR codes
 - 🌍 **Works anywhere** — guest mode, no signup required to share
 - 📊 **Track everything** — downloads, expiry countdowns, file status
+- 🤖 **AI Document Analysis** — one-click summary, document type, keywords, security risk & sensitive data scan
+- 💬 **Grounded Q&A** — ask questions directly from an uploaded document's content
 - ✨ **Premium by default** — Midnight Indigo glassmorphic UI with cinematic motion
 - 🎨 **Animated everything** — SVG logo, animated feature icons, premium toasts
 - 🔐 **JWT auth** — sign up / login with persistent sessions
@@ -41,10 +45,11 @@ Password-protect, set expiry dates, generate QR codes — all wrapped in a cinem
 - Space Grotesk + DM Sans typography
 - react-toastify with custom animated theme
 
-**Backend** (`server/`) — *do not modify*
+**Backend** (`server/`)
 - Node.js + Express
 - MongoDB (Mongoose)
 - AWS S3 for file storage
+- OpenRouter for AI document analysis
 - JWT authentication
 - Multer for uploads
 
@@ -54,6 +59,7 @@ Password-protect, set expiry dates, generate QR codes — all wrapped in a cinem
 - Node.js 18+
 - MongoDB instance (local or Atlas)
 - AWS S3 bucket + credentials
+- OpenRouter API key (for AI features)
 
 ### Frontend
 
@@ -75,12 +81,29 @@ Create `server/.env`:
 
 ```env
 PORT=6600
-MONGO_URI=your_mongo_connection_string
+NODE_ENV=development
+CLIENT_URL=http://localhost:8080
+
+MONGODB_URI=your_mongo_connection_string
 JWT_SECRET=your_jwt_secret
+
 AWS_ACCESS_KEY_ID=...
 AWS_SECRET_ACCESS_KEY=...
 AWS_REGION=...
 AWS_BUCKET_NAME=...
+
+# Optional: Mail
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=...
+SMTP_PASS=...
+
+# Required for AI Document Analysis
+OPENROUTER_API_KEY=your_openrouter_key_here
+OPENROUTER_MODEL=deepseek/deepseek-chat-v3-0324:free
+
+# Optional: Vault Assistant chat
+LOVABLE_API_KEY=your_lovable_api_key_here
 ```
 
 ## 📁 Project Structure
@@ -96,14 +119,44 @@ sharevault/
 │   │   │   ├── Logo.jsx       # Animated SVG mark
 │   │   │   ├── FeatureIcon.jsx
 │   │   │   ├── Header/Footer/Login/Signup
-│   │   ├── redux/             # Store + slices (auth, file)
+│   │   ├── redux/             # Store + slices (auth, file, ai)
 │   │   ├── index.css          # Midnight Indigo design system
 │   │   └── toast.css          # Premium animated toasts
 │   └── vite.config.js
-├── server/                    # Express API (do not modify)
+├── server/                    # Express API
+│   ├── src/
+│   │   ├── controllers/       # Route handlers (ai, file, user)
+│   │   ├── models/            # Mongoose schemas (AIAnalysis, File, User)
+│   │   ├── routes/            # Express routes (ai, file, user)
+│   │   ├── services/          # AI + PDF/DOCX text extraction service
+│   │   └── config/            # AWS S3, DB config
+│   └── package.json
 ├── package.json               # Root proxy scripts
 └── README.md
 ```
+
+## 🤖 AI Document Analysis
+
+Upload a supported document (PDF, DOCX, TXT) and click the **AI** button on any file in the dashboard to get:
+
+| Field | Description |
+|-------|-------------|
+| `Summary` | Concise document summary |
+| `Document Type` | academic, code, legal, invoice, image or other |
+| `Keywords` | Top relevant keywords extracted from the text |
+| `Security Risk` | LOW, MEDIUM or HIGH based on sensitive data found |
+| `Sensitive Data` | Detected emails, phone numbers, passwords, API keys, PII, etc. |
+| `Q&A` | Ask follow-up questions answered strictly from the document |
+
+**AI endpoints** (authenticated):
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/ai/analyze/:fileId` | Analyze or fetch cached analysis |
+| GET | `/api/ai/analysis/:fileId` | Get existing analysis |
+| POST | `/api/ai/ask/:fileId` | Ask a question about the document |
+
+Results are cached in MongoDB so the same file is never analyzed twice.
 
 ## 🎨 Design System
 
