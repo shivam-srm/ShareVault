@@ -796,6 +796,14 @@ const FileShow = () => {
           </div>
         </div>
       )}
+
+      {/* AI Analysis Modal */}
+      <AIAnalysisModal
+        isOpen={Boolean(aiFile)}
+        fileId={aiFile?._id}
+        fileName={aiFile?.name}
+        onClose={() => setAiFile(null)}
+      />
     </div>
   );
 };
