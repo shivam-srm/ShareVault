@@ -1,6 +1,6 @@
-import axios from "axios";
 import mongoose from "mongoose";
 import { File } from "../models/file.models.js";
+import { chatWithVaultAI, AIServiceError as ChatAIServiceError } from "../services/aiService.js";
 
 export const chatWithVault = async (req, res) => {
   try {
@@ -25,27 +25,16 @@ AVAILABLE ACTIONS:
 ${fileListContext}
 Be professional, helpful, and concise. Use Markdown for formatting.`;
 
-    const response = await axios.post(
-      "https://api.lovable.ai/v1/chat/completions",
-      {
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...history,
-          { role: "user", content: message }
-        ],
-      },
-      {
-        headers: {
-          "Authorization": `Bearer ${process.env.LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    if (!message || typeof message !== "string" || !message.trim()) {
+      return res.status(400).json({ error: "Message is required." });
+    }
 
-    const aiMessage = response.data.choices[0].message.content;
+    const aiMessage = await chatWithVaultAI({ systemPrompt, history, message: message.trim() });
     res.status(200).json({ message: aiMessage });
   } catch (error) {
+    if (error instanceof ChatAIServiceError) {
+      return res.status(error.status || 500).json({ error: error.message });
+    }
     console.error("AI Assistant Error:", error.response?.data || error.message);
     res.status(500).json({ error: "Vault Assistant is temporarily unavailable." });
   }

@@ -138,4 +138,28 @@ Use concise Markdown.`;
 };
 
 export { AIServiceError };
-export default { analyzeDocumentText, answerQuestion, validateAnalysis, AIServiceError };
+
+/** Vault Assistant chat — general assistant grounded in the user's file list. */
+export const chatWithVaultAI = async ({ systemPrompt, history = [], message }) => {
+  const safeHistory = (Array.isArray(history) ? history : [])
+    .filter((m) => m && typeof m.content === "string" && ["user", "assistant"].includes(m.role))
+    .slice(-12)
+    .map((m) => ({ role: m.role, content: m.content.slice(0, 4000) }));
+
+  return callOpenRouter(
+    [
+      { role: "system", content: systemPrompt },
+      ...safeHistory,
+      { role: "user", content: String(message).slice(0, 4000) },
+    ],
+    { maxTokens: 900, temperature: 0.4 }
+  );
+};
+
+export default {
+  analyzeDocumentText,
+  answerQuestion,
+  chatWithVaultAI,
+  validateAnalysis,
+  AIServiceError,
+};
