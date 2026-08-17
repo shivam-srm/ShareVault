@@ -2,6 +2,38 @@ import mongoose from "mongoose";
 import { File } from "../models/file.models.js";
 import { chatWithVaultAI, AIServiceError as ChatAIServiceError } from "../services/aiService.js";
 
+/** Public (no-auth) landing page assistant — answers questions about ShareVault. */
+export const publicChat = async (req, res) => {
+  try {
+    const { message, history = [] } = req.body;
+    if (!message || typeof message !== "string" || !message.trim()) {
+      return res.status(400).json({ error: "Message is required." });
+    }
+
+    const systemPrompt = `You are "Vault Assistant", the friendly guide on the ShareVault public website.
+ShareVault is a secure file sharing platform: users upload files, get shareable links with expiry dates,
+track downloads from a dashboard, and can run AI document analysis (summary, document type, keywords,
+security risk, sensitive data detection) on their uploaded PDFs, DOCX and text files.
+Guests can also share a file without an account, but a free account unlocks unlimited uploads,
+analytics and the dashboard.
+
+Rules:
+- You are talking to a visitor who is NOT logged in. You have no access to any files or accounts.
+- Never claim to see, delete or modify files. If asked, invite them to sign up or log in.
+- Answer questions about ShareVault features, pricing-free signup, security and how to get started.
+- Be warm, concise and helpful. Use Markdown. Keep answers under 120 words.`;
+
+    const aiMessage = await chatWithVaultAI({ systemPrompt, history, message: message.trim() });
+    res.status(200).json({ message: aiMessage });
+  } catch (error) {
+    if (error instanceof ChatAIServiceError) {
+      return res.status(error.status || 500).json({ error: error.message });
+    }
+    console.error("Public Assistant Error:", error.response?.data || error.message);
+    res.status(500).json({ error: "Vault Assistant is temporarily unavailable." });
+  }
+};
+
 export const chatWithVault = async (req, res) => {
   try {
     const { message, history = [] } = req.body;

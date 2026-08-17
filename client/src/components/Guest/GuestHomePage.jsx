@@ -5,6 +5,7 @@ import GuestFilePreview from "./GuestFilePreview";
 import GuestFileUpload from "./GuestFileUpload";
 import Footer from "../Footer";
 import FeatureIcon from "../FeatureIcon";
+import PublicAssistant from "./PublicAssistant";
 
 
 const stats = [
@@ -260,6 +261,7 @@ const GuestHomePage = () => {
       </section>
 
       <Footer />
+      <PublicAssistant />
     </div>
   );
 };
