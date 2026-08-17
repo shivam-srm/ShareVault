@@ -23,8 +23,10 @@ import {
   FiZoomIn,
   FiZoomOut,
   FiMaximize2,
+  FiCpu,
 } from "react-icons/fi";
 import { toast } from "react-toastify";
+import AIAnalysisModal from "./AIAnalysisModal";
 
 const isTextLike = (type = "", name = "") => {
   if (!type && !name) return false;
@@ -54,6 +56,7 @@ const FileShow = () => {
   const { files } = useSelector((state) => state.file);
   const [previewFile, setPreviewFile] = useState(null);
   const [shareFile, setShareFile] = useState(null);
+  const [aiFile, setAiFile] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
@@ -452,6 +455,13 @@ const FileShow = () => {
                               >
                                 <FiShare2 /> Share
                               </button>
+                              <button
+                                onClick={() => setAiFile(file)}
+                                title="AI Analysis"
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-200 border border-indigo-400/30 bg-indigo-500/10 hover:bg-indigo-500/20 transition"
+                              >
+                                <FiCpu /> AI
+                              </button>
                             </div>
                           </td>
                           <td className="px-4 py-3 text-sm text-red-300">
@@ -534,6 +544,12 @@ const FileShow = () => {
                                   className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-xs font-semibold text-white bg-[var(--gradient-aurora)] shadow-[var(--shadow-glow)]"
                                 >
                                   <FiShare2 /> Share
+                                </button>
+                                <button
+                                  onClick={() => setAiFile(file)}
+                                  className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-xs font-semibold text-indigo-200 border border-indigo-400/30 bg-indigo-500/10"
+                                >
+                                  <FiCpu /> AI
                                 </button>
                               </div>
                             </div>
@@ -780,8 +796,17 @@ const FileShow = () => {
           </div>
         </div>
       )}
+
+      {/* AI Analysis Modal */}
+      <AIAnalysisModal
+        isOpen={Boolean(aiFile)}
+        fileId={aiFile?._id}
+        fileName={aiFile?.name}
+        onClose={() => setAiFile(null)}
+      />
     </div>
   );
 };
+
 
 export default FileShow;
