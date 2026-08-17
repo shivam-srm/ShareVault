@@ -1,12 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
-import { createRequire } from "module";
 import mammoth from "mammoth";
-
-const require = createRequire(import.meta.url);
-// Import the lib entry directly: the package index runs a debug harness that
-// reads a bundled test PDF when required as a module.
-const pdfParse = require("pdf-parse/lib/pdf-parse.js");
+import { PDFParse } from "pdf-parse";
 
 const TEXT_EXTENSIONS = new Set([
   "txt", "md", "markdown", "json", "xml", "yml", "yaml", "csv", "log", "env",
@@ -33,8 +28,16 @@ export const extractText = async (filePath, fileName = "") => {
   try {
     if (ext === "pdf") {
       const buffer = await fs.readFile(filePath);
-      const parsed = await pdfParse(buffer);
-      return { text: parsed.text || "", pageCount: parsed.numpages || 1 };
+      const parser = new PDFParse({ data: new Uint8Array(buffer) });
+      try {
+        const parsed = await parser.getText();
+        return {
+          text: parsed?.text || "",
+          pageCount: parsed?.total ?? parsed?.pages?.length ?? 1,
+        };
+      } finally {
+        await parser.destroy?.();
+      }
     }
 
     if (ext === "docx") {
