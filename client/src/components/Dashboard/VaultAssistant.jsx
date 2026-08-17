@@ -114,7 +114,7 @@ const VaultAssistant = () => {
                       : 'glass border border-white/10 text-[var(--text-color)] rounded-tl-none'
                   }`}
                 >
-                  <ReactMarkdown className="markdown-content">{msg.content}</ReactMarkdown>
+                  <div className="markdown-content"><ReactMarkdown>{msg.content}</ReactMarkdown></div>
                 </div>
               </div>
             ))}
