@@ -1,0 +1,19 @@
+{
+  "name": "root",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "cd client && npx vite --port 8080",
+    "dev:client": "cd client && npx vite --port 8080",
+    "dev:server": "cd server && npx nodemon src/index.js",
+    "dev:all": "concurrently -k -n server,client -c blue,magenta \"npm:dev:server\" \"npm:dev:client\"",
+    "build": "cd client && npx vite build --outDir ../dist --emptyOutDir",
+    "build:dev": "cd client && npx vite build --outDir ../dist --emptyOutDir",
+    "preview": "cd client && npx vite preview",
+    "lint": "cd client && npx eslint . --ext js,jsx",
+    "postinstall": "cd client && npm install && cd ../server && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  }
+}

@@ -1,0 +1,255 @@
+import { useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { toast } from "react-toastify";
+import { FiLock, FiDownload, FiShield, FiCalendar, FiHardDrive, FiFileText, FiUser, FiZoomIn, FiZoomOut, FiMaximize2, FiX, FiExternalLink } from "react-icons/fi";
+
+const isTextLike = (type = "", name = "") => {
+  if (type.startsWith("text/")) return true;
+  if (["application/json","application/xml","application/javascript","application/x-yaml","application/x-sh"].includes(type)) return true;
+  const ext = name.split(".").pop()?.toLowerCase();
+  return ["txt","md","markdown","json","xml","yml","yaml","csv","log","js","jsx","ts","tsx","css","scss","html","htm","py","rb","go","java","c","cpp","h","hpp","cs","php","sh","bash","env","ini","toml","sql","kt","swift","rs","vue","svelte"].includes(ext);
+};
+
+const GuestDownload = () => {
+  const { shortCode } = useParams();
+  const [file, setFile] = useState(null);
+  const [error, setError] = useState("");
+  const [isProtected, setIsProtected] = useState(false);
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isVerified, setIsVerified] = useState(false);
+  const [imgZoom, setImgZoom] = useState(1);
+  const [lightbox, setLightbox] = useState(false);
+  const [textContent, setTextContent] = useState("");
+  const [textLoading, setTextLoading] = useState(false);
+
+  useEffect(() => {
+    if (!file || (isProtected && !isVerified)) return;
+    if (isTextLike(file.type, file.name)) {
+      setTextLoading(true);
+      fetch(file.path)
+        .then((r) => r.text())
+        .then((t) => setTextContent(t.slice(0, 200000)))
+        .catch(() => setTextContent("// Unable to load content"))
+        .finally(() => setTextLoading(false));
+    }
+  }, [file, isProtected, isVerified]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const fetchFile = async () => {
+      try {
+        const res = await fetch(`http://localhost:6600/api/files/g/${shortCode}`, {
+          signal: controller.signal,
+        });
+        if (!res.ok) throw new Error("File not found");
+        const data = await res.json();
+        setFile(data);
+        setIsProtected(data.isPasswordProtected);
+        setIsLoading(false);
+        if (data.isPasswordProtected) {
+          toast.info("🔒 This file is password protected. Please enter the password.");
+        }
+      } catch (err) {
+        if (err.name !== "AbortError") setError(err.message);
+      }
+    };
+    fetchFile();
+    return () => controller.abort();
+  }, [shortCode]);
+
+  const handleDownload = () => {
+    const link = document.createElement("a");
+    link.href = file.downloadUrl;
+    link.setAttribute("download", file.name);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const verifyFile = async () => {
+    if (!password) {
+      toast.warn("Please enter a password.");
+      return;
+    }
+    try {
+      const res = await fetch(`http://localhost:6600/api/files/verifyGuestFilePassword`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shortCode, password }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        toast.success("✅ Password verified! You can now download the file.");
+        setIsVerified(true);
+      } else {
+        toast.error("❌ Incorrect password. Try again.");
+      }
+    } catch (err) {
+      toast.error("Something went wrong. Please try again.");
+    }
+  };
+
+  if (error) {
+    return (
+      <div className="glass rounded-2xl p-8 text-center max-w-md mx-auto border border-red-500/30">
+        <div className="text-4xl mb-3">⚠️</div>
+        <p className="text-red-400 font-semibold">{error}</p>
+      </div>
+    );
+  }
+
+  if (isLoading || !file) {
+    return (
+      <div className="glass rounded-2xl p-12 text-center max-w-md mx-auto">
+        <div className="animate-pulse text-[var(--primary-text)] font-medium">Loading file…</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="glass-strong rounded-3xl overflow-hidden border border-white/10 shadow-[var(--shadow-elevated)] animate-fade-in">
+      <div className="p-6 sm:p-8 flex flex-col lg:flex-row gap-8">
+        <div className="w-full lg:w-2/3 flex flex-col gap-4">
+          <div className="flex items-center gap-2 text-sm text-[var(--text-muted,#94a3b8)]">
+            <FiFileText className="text-[var(--primary-text)]" />
+            <span className="font-medium text-[var(--text-color)] break-all">{file.name}</span>
+          </div>
+
+          <div className="w-full">
+            <h2 className="text-sm uppercase tracking-widest text-[var(--primary-text)] mb-3">Preview</h2>
+            {isProtected && !isVerified ? (
+              <div className="w-full flex flex-col items-center justify-center p-10 rounded-2xl glass border border-dashed border-white/15 text-center">
+                <div className="w-20 h-20 rounded-2xl bg-[var(--gradient-aurora)] flex items-center justify-center mb-4 shadow-[var(--shadow-glow)] animate-float">
+                  <FiLock className="text-white text-3xl" />
+                </div>
+                <p className="text-[var(--text-color)] text-base font-medium">Protected File</p>
+                <p className="text-[var(--text-muted,#94a3b8)] text-sm mt-1">Verify the password to preview or download.</p>
+              </div>
+            ) : (
+              <div className="rounded-2xl overflow-hidden bg-black/30 border border-white/10 relative">
+                {file.type.startsWith("image/") && (
+                  <div className="relative">
+                    <img
+                      src={file.path}
+                      alt={file.name}
+                      style={{ transform: `scale(${imgZoom})`, transformOrigin: "center" }}
+                      className="w-full h-auto transition-transform cursor-zoom-in"
+                      onClick={() => setLightbox(true)}
+                    />
+                    <div className="absolute bottom-3 right-3 flex gap-1 p-1 rounded-lg bg-black/60 backdrop-blur border border-white/10">
+                      <button onClick={() => setImgZoom((z) => Math.max(0.5, z - 0.25))} className="p-1.5 text-white/80 hover:text-white" title="Zoom out"><FiZoomOut /></button>
+                      <button onClick={() => setImgZoom(1)} className="px-2 text-xs text-white/80 hover:text-white">{Math.round(imgZoom * 100)}%</button>
+                      <button onClick={() => setImgZoom((z) => Math.min(4, z + 0.25))} className="p-1.5 text-white/80 hover:text-white" title="Zoom in"><FiZoomIn /></button>
+                      <button onClick={() => setLightbox(true)} className="p-1.5 text-white/80 hover:text-white" title="Fullscreen"><FiMaximize2 /></button>
+                    </div>
+                  </div>
+                )}
+                {file.type.startsWith("video/") && (
+                  <video controls className="w-full h-auto">
+                    <source src={file.path} type={file.type} />
+                  </video>
+                )}
+                {file.type.startsWith("audio/") && (
+                  <audio controls className="w-full p-4">
+                    <source src={file.path} type={file.type} />
+                  </audio>
+                )}
+                {file.type === "application/pdf" && (
+                  <div>
+                    <iframe src={`${file.path}#toolbar=1&navpanes=0&view=FitH`} title="PDF Preview" className="w-full h-[520px]" />
+                    <a href={file.path} target="_blank" rel="noreferrer" className="absolute top-3 right-3 inline-flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-lg bg-black/60 border border-white/10 text-white/90 hover:text-white">
+                      <FiExternalLink /> Open
+                    </a>
+                  </div>
+                )}
+                {isTextLike(file.type, file.name) && (
+                  <div className="max-h-[520px] overflow-auto">
+                    {textLoading ? (
+                      <div className="p-6 text-sm text-[var(--text-muted,#94a3b8)] animate-pulse">Loading content…</div>
+                    ) : (
+                      <pre className="p-4 text-xs sm:text-sm leading-relaxed text-emerald-100/90 font-mono whitespace-pre-wrap break-words">{textContent || "// Empty"}</pre>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {lightbox && file.type.startsWith("image/") && (
+            <div className="fixed inset-0 z-[60] bg-black/95 flex items-center justify-center p-4 animate-fade-in" onClick={() => setLightbox(false)}>
+              <img src={file.path} alt={file.name} className="max-w-full max-h-full object-contain cursor-zoom-out" />
+              <button onClick={(e) => { e.stopPropagation(); setLightbox(false); }} className="absolute top-4 right-4 p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white">
+                <FiX size={22} />
+              </button>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2 text-sm text-[var(--text-muted,#94a3b8)] mt-2">
+            <FiUser className="text-[var(--primary-text)]" />
+            <span>Uploaded by <span className="text-[var(--text-color)] font-medium">{file.uploadedBy}</span></span>
+          </div>
+        </div>
+
+        <div className="w-full lg:w-1/3 flex flex-col gap-4">
+          <div className="glass rounded-2xl p-5 space-y-3 border border-white/10">
+            <div className="flex items-center gap-3 text-sm">
+              <FiCalendar className="text-[var(--primary-text)]" />
+              <div>
+                <div className="text-[var(--text-muted,#94a3b8)] text-xs uppercase tracking-wider">Uploaded on</div>
+                <div className="text-[var(--text-color)]">{new Date(file.createdAt).toLocaleDateString()}</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 text-sm">
+              <FiHardDrive className="text-[var(--primary-text)]" />
+              <div>
+                <div className="text-[var(--text-muted,#94a3b8)] text-xs uppercase tracking-wider">Size</div>
+                <div className="text-[var(--text-color)]">{(file.size / 1024 / 1024).toFixed(2)} MB</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 text-sm">
+              <FiFileText className="text-[var(--primary-text)]" />
+              <div>
+                <div className="text-[var(--text-muted,#94a3b8)] text-xs uppercase tracking-wider">Type</div>
+                <div className="text-[var(--text-color)] break-all">{file.type}</div>
+              </div>
+            </div>
+          </div>
+
+          {isProtected && !isVerified && (
+            <div className="glass rounded-2xl p-5 space-y-3 border border-white/10">
+              <label className="flex items-center gap-2 text-xs uppercase tracking-widest text-[var(--primary-text)]">
+                <FiShield /> Password Required
+              </label>
+              <input
+                type="password"
+                placeholder="Enter Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full p-3 rounded-xl bg-black/30 border border-white/10 text-[var(--text-color)] placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-[var(--primary-text)] transition"
+              />
+              <button
+                onClick={verifyFile}
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold text-white bg-[var(--gradient-aurora)] hover:opacity-95 shadow-[var(--shadow-glow)] transition"
+              >
+                <FiShield /> Verify Password
+              </button>
+            </div>
+          )}
+
+          {(!isProtected || isVerified) && (
+            <button
+              onClick={handleDownload}
+              className="group w-full inline-flex items-center justify-center gap-2 px-5 py-4 rounded-2xl font-semibold text-white bg-[var(--gradient-aurora)] shadow-[var(--shadow-glow)] hover:shadow-[0_20px_60px_-15px_rgba(79,70,229,0.7)] hover:-translate-y-0.5 transition-all"
+            >
+              <FiDownload className="text-xl group-hover:animate-bounce" />
+              Download Now
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default GuestDownload;
