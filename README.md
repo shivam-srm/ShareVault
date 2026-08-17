@@ -92,18 +92,9 @@ AWS_SECRET_ACCESS_KEY=...
 AWS_REGION=...
 AWS_BUCKET_NAME=...
 
-# Optional: Mail
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=...
-SMTP_PASS=...
-
-# Required for AI Document Analysis
+# Required for AI Document Analysis & Vault Assistant chat
 OPENROUTER_API_KEY=your_openrouter_key_here
 OPENROUTER_MODEL=deepseek/deepseek-chat-v3-0324:free
-
-# Optional: Vault Assistant chat
-LOVABLE_API_KEY=your_lovable_api_key_here
 ```
 
 ## 📁 Project Structure
