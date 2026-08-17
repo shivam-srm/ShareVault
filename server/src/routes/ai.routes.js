@@ -1,6 +1,7 @@
 import express from "express";
 import {
   chatWithVault,
+  publicChat,
   analyzeDocument,
   askQuestion,
   getAnalysis,
@@ -8,6 +9,9 @@ import {
 import authenticate from "../middlewares/auth.middlewares.js";
 
 const router = express.Router();
+
+// Public landing-page assistant (no auth required)
+router.post("/public-chat", publicChat);
 
 router.post("/chat", authenticate, chatWithVault);
 
