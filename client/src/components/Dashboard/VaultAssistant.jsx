@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { FiMessageSquare, FiSend, FiX, FiMinus, FiMaximize2, FiCpu } from "react-icons/fi";
+import { FiMessageSquare, FiSend, FiX, FiMinus, FiMaximize2, FiCpu, FiPaperclip, FiFileText, FiImage } from "react-icons/fi";
 import axiosInstance from "../../config/axiosInstance";
 import { toast } from "react-toastify";
 import ReactMarkdown from "react-markdown";
@@ -12,7 +12,22 @@ const VaultAssistant = () => {
     { role: "assistant", content: "Hello! I'm your Vault Assistant. How can I help you with your files today?" }
   ]);
   const [loading, setLoading] = useState(false);
+  const [attachment, setAttachment] = useState(null);
   const scrollRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  const isImage = (file) => file && file.type.startsWith("image/");
+
+  const handlePickFile = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error("Attachment must be under 8 MB");
+      return;
+    }
+    setAttachment(file);
+  };
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -20,9 +35,34 @@ const VaultAssistant = () => {
     }
   }, [chat]);
 
+  const sendWithAttachment = async (file, text) => {
+    const label = `${isImage(file) ? "🖼️" : "📄"} **${file.name}**${text ? `\n\n${text}` : ""}`;
+    setChat(prev => [...prev, { role: "user", content: label }]);
+    setMessage("");
+    setAttachment(null);
+    setLoading(true);
+
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("message", text || "");
+      form.append("history", JSON.stringify(chat.slice(-6)));
+      const res = await axiosInstance.post("/ai/chat-attachment", form);
+      setChat(prev => [...prev, { role: "assistant", content: res.data.message }]);
+    } catch (err) {
+      const msg = err?.response?.data?.error || "Could not analyze that attachment.";
+      toast.error(msg);
+      setChat(prev => [...prev, { role: "assistant", content: msg }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSend = async (e) => {
     e.preventDefault();
-    if (!message.trim() || loading) return;
+    if (loading) return;
+    if (attachment) return sendWithAttachment(attachment, message.trim());
+    if (!message.trim()) return;
 
     const userMsg = { role: "user", content: message };
     setChat(prev => [...prev, userMsg]);
@@ -130,21 +170,49 @@ const VaultAssistant = () => {
           </div>
 
           {/* Input */}
-          <form onSubmit={handleSend} className="p-4 bg-white/5 border-t border-white/10 flex gap-2">
-            <input
-              type="text"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Ask anything..."
-              className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-[var(--primary-text)] transition-colors"
-            />
-            <button
-              type="submit"
-              disabled={loading || !message.trim()}
-              className="btn-premium p-2 rounded-xl flex items-center justify-center disabled:opacity-50"
-            >
-              <FiSend />
-            </button>
+          <form onSubmit={handleSend} className="p-4 bg-white/5 border-t border-white/10 space-y-2">
+            {attachment && (
+              <div className="flex items-center gap-2 glass border border-white/10 rounded-xl px-3 py-2 text-xs">
+                {isImage(attachment) ? <FiImage className="shrink-0" /> : <FiFileText className="shrink-0" />}
+                <span className="truncate flex-1">{attachment.name}</span>
+                <span className="text-[var(--text-muted)]">{(attachment.size / 1024).toFixed(0)} KB</span>
+                <button type="button" onClick={() => setAttachment(null)} className="hover:text-red-400 p-1" title="Remove attachment">
+                  <FiX size={14} />
+                </button>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                onChange={handlePickFile}
+                accept=".png,.jpg,.jpeg,.webp,.gif,.pdf,.docx,.txt,.md,.json,.csv,.log,.yml,.yaml,.xml,.js,.jsx,.ts,.tsx,.py,.sql,.html,.css"
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={loading}
+                title="Attach a screenshot or document"
+                className="p-2 rounded-xl bg-white/5 border border-white/10 hover:border-[var(--primary-text)] text-[var(--text-muted)] hover:text-white transition-colors disabled:opacity-50"
+              >
+                <FiPaperclip />
+              </button>
+              <input
+                type="text"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder={attachment ? "Ask about this file..." : "Ask anything..."}
+                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-[var(--primary-text)] transition-colors"
+              />
+              <button
+                type="submit"
+                disabled={loading || (!message.trim() && !attachment)}
+                className="btn-premium p-2 rounded-xl flex items-center justify-center disabled:opacity-50"
+              >
+                <FiSend />
+              </button>
+            </div>
           </form>
         </>
       )}
