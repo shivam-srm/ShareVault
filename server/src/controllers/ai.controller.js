@@ -2,7 +2,6 @@ import mongoose from "mongoose";
 import { File } from "../models/file.models.js";
 import { chatWithVaultAI, AIServiceError as ChatAIServiceError } from "../services/aiService.js";
 import { extractTextFromBuffer } from "../services/pdfService.js";
-import path from "path";
 
 /** Public (no-auth) landing page assistant — answers questions about ShareVault. */
 export const publicChat = async (req, res) => {
