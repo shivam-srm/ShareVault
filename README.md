@@ -2,12 +2,9 @@
 
 # 🔐 ShareVault
 
-### Premium file sharing at the speed of thought.
+### Premium file sharing with built-in AI intelligence.
 
-Drag, drop, and get a beautiful shareable link in under a second.  
-Now with AI-powered document analysis and grounded Q&A.
-
-Password-protect, set expiry dates, generate QR codes — all wrapped in a cinematic Midnight Indigo UI.
+Drag, drop, and get a beautiful shareable link in under a second. Ask questions about your documents, chat with an AI assistant, and scan files for sensitive data — all wrapped in a cinematic Midnight Indigo UI.
 
 **Crafted by [Shivam Rai](https://techwithshivam.in/)**
 
@@ -17,22 +14,28 @@ Password-protect, set expiry dates, generate QR codes — all wrapped in a cinem
 ![Node](https://img.shields.io/badge/Node-Express-339933?style=for-the-badge&logo=node.js&logoColor=white)
 ![MongoDB](https://img.shields.io/badge/MongoDB-47a248?style=for-the-badge&logo=mongodb&logoColor=white)
 ![AWS S3](https://img.shields.io/badge/AWS-S3-ff9900?style=for-the-badge&logo=amazonaws&logoColor=white)
+![OpenRouter](https://img.shields.io/badge/OpenRouter-AI-5a3ee0?style=for-the-badge)
 
 </div>
 
 ---
 
+## ✨ What is ShareVault?
+
+ShareVault is a full-stack file sharing platform with a modern React frontend, an Express + MongoDB backend, and AWS S3 storage. It supports both guest mode (no sign-up required) and authenticated user accounts, with AI features powered entirely by OpenRouter.
+
 ## ✨ Features
 
 - ⚡ **Lightning uploads** — multi-file drag & drop with animated progress
-- 🔒 **Password protected** — lock any link, set expiry dates
+- 🔒 **Password protected links** — lock any file, set expiry dates
 - 🔗 **Beautiful share links** — short URLs + instant QR codes
-- 🌍 **Works anywhere** — guest mode, no signup required to share
+- 🌍 **Guest mode** — no signup required to share or download
 - 📊 **Track everything** — downloads, expiry countdowns, file status
 - 🤖 **AI Document Analysis** — one-click summary, document type, keywords, security risk & sensitive data scan
-- 💬 **Grounded Q&A** — ask questions directly from an uploaded document's content
+- 💬 **Grounded Q&A** — ask questions answered strictly from an uploaded document
+- 🧠 **Vault Assistant** — AI chat inside the dashboard (supports screenshots, PDFs, DOCX and text attachments)
+- 🏠 **Public Landing Assistant** — AI chat widget on the home page for visitors
 - ✨ **Premium by default** — Midnight Indigo glassmorphic UI with cinematic motion
-- 🎨 **Animated everything** — SVG logo, animated feature icons, premium toasts
 - 🔐 **JWT auth** — sign up / login with persistent sessions
 
 ## 🏗 Tech Stack
@@ -49,7 +52,7 @@ Password-protect, set expiry dates, generate QR codes — all wrapped in a cinem
 - Node.js + Express
 - MongoDB (Mongoose)
 - AWS S3 for file storage
-- OpenRouter for AI document analysis
+- OpenRouter for all AI features (chat, document analysis, vision)
 - JWT authentication
 - Multer for uploads
 
@@ -59,43 +62,77 @@ Password-protect, set expiry dates, generate QR codes — all wrapped in a cinem
 - Node.js 18+
 - MongoDB instance (local or Atlas)
 - AWS S3 bucket + credentials
-- OpenRouter API key (for AI features)
+- OpenRouter API key (for all AI features)
 
-### Frontend
+### 1. Install dependencies
 
-```bash
-npm install           # installs client deps via prefix
-npm run dev           # starts Vite on http://localhost:8080
-npm run build         # production build → /dist
-```
-
-### Backend
+Install both the client and server dependencies in one command from the project root:
 
 ```bash
-cd server
 npm install
-npm run dev           # starts API on http://localhost:6600
 ```
+
+This runs `npm install` in both `client/` and `server/` because of the `postinstall` script.
+
+### 2. Configure environment variables
 
 Create `server/.env`:
 
 ```env
+# ---------- Server ----------
 PORT=6600
 NODE_ENV=development
 CLIENT_URL=http://localhost:8080
 
-MONGODB_URI=your_mongo_connection_string
-JWT_SECRET=your_jwt_secret
+# ---------- Database ----------
+MONGODB_URI=your_mongodb_connection_string
 
-AWS_ACCESS_KEY_ID=...
-AWS_SECRET_ACCESS_KEY=...
-AWS_REGION=...
-AWS_BUCKET_NAME=...
+# ---------- Auth ----------
+JWT_SECRET=change_me_to_a_long_random_string
 
-# Required for AI Document Analysis & Vault Assistant chat
+# ---------- AWS S3 ----------
+AWS_ACCESS_KEY_ID=your_aws_access_key
+AWS_SECRET_ACCESS_KEY=your_aws_secret_key
+AWS_REGION=ap-south-1
+AWS_BUCKET_NAME=your_bucket_name
+
+# ---------- OpenRouter AI (required for all AI features) ----------
 OPENROUTER_API_KEY=your_openrouter_key_here
 OPENROUTER_MODEL=deepseek/deepseek-chat-v3-0324:free
+# Optional: vision model for image/screenshot attachments in Vault Assistant
+OPENROUTER_VISION_MODEL=google/gemini-2.0-flash-exp:free
 ```
+
+The frontend already proxies `/api` requests to the backend at `http://localhost:6600` via the `VITE_API_PROXY_TARGET` defined in `client/.env`. If you change the backend port, update that value too.
+
+### 3. Run the app
+
+**Run both frontend and backend at once:**
+
+```bash
+npm run dev:all
+```
+
+- Frontend: http://localhost:8080
+- Backend: http://localhost:6600
+
+**Run separately:**
+
+```bash
+# Terminal 1 — server
+npm run dev:server
+
+# Terminal 2 — client
+npm run dev:client
+```
+
+### 4. Build for production
+
+```bash
+npm run build
+```
+
+This builds the React app into `/dist` and can be served by the Express backend (static hosting is configured in `server/src/index.js`).
 
 ## 📁 Project Structure
 
@@ -104,9 +141,9 @@ sharevault/
 ├── client/                    # React frontend
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── Guest/         # Public upload/download flows
+│   │   │   ├── Guest/         # Public upload, download, and assistant flows
 │   │   │   ├── Dashboard/     # Authenticated user area
-│   │   │   ├── Auth/          # Route guards
+│   │   │   ├── Auth/          # Route guards (RequireAuth, NotRequireAuth)
 │   │   │   ├── Logo.jsx       # Animated SVG mark
 │   │   │   ├── FeatureIcon.jsx
 │   │   │   ├── Header/Footer/Login/Signup
@@ -117,18 +154,23 @@ sharevault/
 ├── server/                    # Express API
 │   ├── src/
 │   │   ├── controllers/       # Route handlers (ai, file, user)
-│   │   ├── models/            # Mongoose schemas (AIAnalysis, File, User)
+│   │   ├── models/            # Mongoose schemas (AIAnalysis, File, GuestFile, User)
 │   │   ├── routes/            # Express routes (ai, file, user)
 │   │   ├── services/          # AI + PDF/DOCX text extraction service
+│   │   ├── middlewares/       # Auth, upload, validation
 │   │   └── config/            # AWS S3, DB config
 │   └── package.json
-├── package.json               # Root proxy scripts
+├── package.json               # Root scripts that run both workspaces
 └── README.md
 ```
 
-## 🤖 AI Document Analysis
+## 🤖 AI Features
 
-Upload a supported document (PDF, DOCX, TXT) and click the **AI** button on any file in the dashboard to get:
+All AI features use **OpenRouter** only. Set `OPENROUTER_API_KEY` in `server/.env` to enable them.
+
+### AI Document Analysis (authenticated)
+
+Upload a supported document (PDF, DOCX, TXT) in the dashboard and click the **AI** button on any file to get:
 
 | Field | Description |
 |-------|-------------|
@@ -139,15 +181,31 @@ Upload a supported document (PDF, DOCX, TXT) and click the **AI** button on any 
 | `Sensitive Data` | Detected emails, phone numbers, passwords, API keys, PII, etc. |
 | `Q&A` | Ask follow-up questions answered strictly from the document |
 
-**AI endpoints** (authenticated):
+Results are cached in MongoDB so the same file is never analyzed twice.
+
+### Vault Assistant (authenticated)
+
+A floating chat widget in the dashboard. You can:
+- Ask general questions
+- Attach screenshots for image analysis
+- Attach PDFs, DOCX, or TXT files to extract text and ask questions
+
+Attachment size limit: 8 MB.
+
+### Public Landing Assistant (guest)
+
+A chat widget on the home page for visitors. Useful for answering questions about ShareVault without requiring a login.
+
+### AI API Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
+| POST | `/api/ai/public-chat` | Public chat on the landing page |
+| POST | `/api/ai/chat` | Authenticated Vault Assistant chat |
+| POST | `/api/ai/chat-attachment` | Chat with a file/screenshot attached |
 | POST | `/api/ai/analyze/:fileId` | Analyze or fetch cached analysis |
 | GET | `/api/ai/analysis/:fileId` | Get existing analysis |
-| POST | `/api/ai/ask/:fileId` | Ask a question about the document |
-
-Results are cached in MongoDB so the same file is never analyzed twice.
+| POST | `/api/ai/ask/:fileId` | Ask a question about a document |
 
 ## 🎨 Design System
 
@@ -160,12 +218,12 @@ Results are cached in MongoDB so the same file is never analyzed twice.
 
 | Path | Description |
 |------|-------------|
-| `/` | Landing / guest upload |
+| `/` | Landing / guest upload + public assistant |
 | `/login` | Sign in |
 | `/signup` | Create account |
-| `/dashboard` | Authenticated file manager |
-| `/f/:shortCode` | Authenticated download |
-| `/g/:shortCode` | Guest download |
+| `/dashboard` | Authenticated file manager + Vault Assistant |
+| `/download/:shortCode` | Download a shared file |
+| `/g/:shortCode` | Guest download route |
 
 ## 📜 License
 
