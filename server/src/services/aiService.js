@@ -2,6 +2,7 @@ import axios from "axios";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const DEFAULT_MODEL = "deepseek/deepseek-chat-v3-0324:free";
+const VISION_MODEL = "google/gemini-2.0-flash-exp:free";
 
 const DOC_TYPES = ["academic", "code", "legal", "invoice", "image", "other"];
 const RISKS = ["LOW", "MEDIUM", "HIGH"];
@@ -16,7 +17,7 @@ class AIServiceError extends Error {
   }
 }
 
-const callOpenRouter = async (messages, { maxTokens = 1200, temperature = 0.2 } = {}) => {
+const callOpenRouter = async (messages, { maxTokens = 1200, temperature = 0.2, model } = {}) => {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     throw new AIServiceError("AI service unavailable: OpenRouter is not configured.", 500);
@@ -26,7 +27,7 @@ const callOpenRouter = async (messages, { maxTokens = 1200, temperature = 0.2 } 
     const { data } = await axios.post(
       OPENROUTER_URL,
       {
-        model: process.env.OPENROUTER_MODEL || DEFAULT_MODEL,
+        model: model || process.env.OPENROUTER_MODEL || DEFAULT_MODEL,
         messages,
         temperature,
         max_tokens: maxTokens,
@@ -139,20 +140,42 @@ Use concise Markdown.`;
 
 export { AIServiceError };
 
-/** Vault Assistant chat — general assistant grounded in the user's file list. */
-export const chatWithVaultAI = async ({ systemPrompt, history = [], message }) => {
+/** Vault Assistant chat — general assistant grounded in the user's file list.
+ *  `attachment` (optional):
+ *    { kind: "image", dataUrl, fileName }  → sent as a vision block
+ *    { kind: "text", text, fileName }      → document text appended to the prompt
+ */
+export const chatWithVaultAI = async ({ systemPrompt, history = [], message, attachment = null }) => {
   const safeHistory = (Array.isArray(history) ? history : [])
     .filter((m) => m && typeof m.content === "string" && ["user", "assistant"].includes(m.role))
     .slice(-12)
     .map((m) => ({ role: m.role, content: m.content.slice(0, 4000) }));
 
+  let userMessage = { role: "user", content: String(message ?? "").slice(0, 4000) };
+  let model;
+
+  if (attachment?.kind === "image" && attachment.dataUrl) {
+    model = process.env.OPENROUTER_VISION_MODEL || VISION_MODEL;
+    userMessage = {
+      role: "user",
+      content: [
+        {
+          type: "text",
+          text: `${String(message || "Analyze this image.").slice(0, 4000)}\n\n(Attached image: ${attachment.fileName || "screenshot"})`,
+        },
+        { type: "image_url", image_url: { url: attachment.dataUrl } },
+      ],
+    };
+  } else if (attachment?.kind === "text" && attachment.text) {
+    userMessage = {
+      role: "user",
+      content: `${String(message || "Analyze this document.").slice(0, 4000)}\n\nAttached file: ${attachment.fileName || "document"}\nFile content:\n"""\n${attachment.text.slice(0, 40000)}\n"""\n\nAnswer using ONLY the attached content when the question is about the file.`,
+    };
+  }
+
   return callOpenRouter(
-    [
-      { role: "system", content: systemPrompt },
-      ...safeHistory,
-      { role: "user", content: String(message).slice(0, 4000) },
-    ],
-    { maxTokens: 900, temperature: 0.4 }
+    [{ role: "system", content: systemPrompt }, ...safeHistory, userMessage],
+    { maxTokens: 900, temperature: 0.4, model }
   );
 };
 

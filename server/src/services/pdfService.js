@@ -56,4 +56,31 @@ export const extractText = async (filePath, fileName = "") => {
   }
 };
 
-export default { extractText, isSupportedForExtraction };
+
+/** Extract plain text from an in-memory buffer (used by chat attachments). */
+export const extractTextFromBuffer = async (buffer, fileName = "") => {
+  const ext = fileName.split(".").pop()?.toLowerCase() || "";
+  try {
+    if (ext === "pdf") {
+      const parser = new PDFParse({ data: new Uint8Array(buffer) });
+      try {
+        const parsed = await parser.getText();
+        return { text: parsed?.text || "", pageCount: parsed?.total ?? 1 };
+      } finally {
+        await parser.destroy?.();
+      }
+    }
+    if (ext === "docx") {
+      const result = await mammoth.extractRawText({ buffer });
+      return { text: result.value || "", pageCount: 1 };
+    }
+    if (ext === "doc") {
+      throw new Error("Legacy .doc files are not supported. Please upload .docx or PDF.");
+    }
+    return { text: buffer.toString("utf8"), pageCount: 1 };
+  } catch (err) {
+    throw new Error(`Text extraction failed: ${err.message}`);
+  }
+};
+
+export default { extractText, extractTextFromBuffer, isSupportedForExtraction };

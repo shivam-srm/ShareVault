@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { File } from "../models/file.models.js";
 import { chatWithVaultAI, AIServiceError as ChatAIServiceError } from "../services/aiService.js";
+import { extractTextFromBuffer } from "../services/pdfService.js";
 
 /** Public (no-auth) landing page assistant — answers questions about ShareVault. */
 export const publicChat = async (req, res) => {
@@ -265,5 +266,68 @@ export const askQuestion = async (req, res) => {
       message:
         error instanceof AIServiceError ? error.message : "Could not answer the question.",
     });
+  }
+};
+
+
+const IMAGE_EXTS = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif"]);
+const MIME_BY_EXT = {
+  ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+  ".webp": "image/webp", ".gif": "image/gif",
+};
+
+/** Build an attachment payload for the AI from an uploaded (in-memory) file. */
+export const buildAttachment = async (file) => {
+  const ext = path.extname(file.originalname).toLowerCase();
+  if (IMAGE_EXTS.has(ext)) {
+    const mime = MIME_BY_EXT[ext] || file.mimetype || "image/png";
+    return {
+      kind: "image",
+      fileName: file.originalname,
+      dataUrl: `data:${mime};base64,${file.buffer.toString("base64")}`,
+    };
+  }
+  const { text } = await extractTextFromBuffer(file.buffer, file.originalname);
+  if (!text || !text.trim()) {
+    throw Object.assign(new Error("No readable text found in the attached file."), { status: 400 });
+  }
+  return { kind: "text", fileName: file.originalname, text };
+};
+
+/** Vault Assistant chat with an attached screenshot or document. */
+export const chatWithAttachment = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "An attachment is required." });
+
+    const { message = "" } = req.body;
+    let history = [];
+    try {
+      history = req.body.history ? JSON.parse(req.body.history) : [];
+    } catch { history = []; }
+
+    const attachment = await buildAttachment(req.file);
+
+    const systemPrompt = `You are "Vault Assistant", the premium AI agent for ShareVault.
+The user has attached a file directly in the chat for analysis.
+- Analyze ONLY what the attachment actually contains; never invent details.
+- For screenshots/images: describe what is shown and answer the user's question about it.
+- For documents: summarise, extract key points, and flag any sensitive data (API keys, passwords, personal info) you notice.
+- Be professional and concise. Use Markdown.`;
+
+    const aiMessage = await chatWithVaultAI({
+      systemPrompt,
+      history,
+      message: message.trim() || "Analyze this attachment.",
+      attachment,
+    });
+
+    res.status(200).json({ message: aiMessage, attachment: { name: attachment.fileName, kind: attachment.kind } });
+  } catch (error) {
+    if (error instanceof ChatAIServiceError) {
+      return res.status(error.status || 500).json({ error: error.message });
+    }
+    if (error.status === 400) return res.status(400).json({ error: error.message });
+    console.error("Attachment chat error:", error.message);
+    res.status(500).json({ error: "Could not analyze the attachment. Please try another file." });
   }
 };
