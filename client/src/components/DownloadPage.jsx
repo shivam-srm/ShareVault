@@ -1,3 +1,4 @@
+import { API_BASE } from "../config/apiBase";
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
@@ -16,7 +17,7 @@ const DownloadPage = () => {
     const controller = new AbortController();
     const fetchFile = async () => {
       try {
-        const res = await fetch(`http://localhost:6600/api/files/f/${shortCode}`, {
+        const res = await fetch(`${API_BASE}files/f/${shortCode}`, {
           signal: controller.signal,
         });
         if (!res.ok) throw new Error("File not found");
@@ -28,7 +29,10 @@ const DownloadPage = () => {
           toast.info("🔒 This file is password protected. Please enter the password.");
         }
       } catch (err) {
-        if (err.name !== "AbortError") setError(err.message);
+        if (err.name !== "AbortError") {
+          setError(err.message === "Failed to fetch" ? "Could not reach the server. Please try again." : err.message);
+          setIsLoading(false);
+        }
       }
     };
     fetchFile();
@@ -50,7 +54,7 @@ const DownloadPage = () => {
       return;
     }
     try {
-      const res = await fetch(`http://localhost:6600/api/files/verifyFilePassword`, {
+      const res = await fetch(`${API_BASE}files/verifyFilePassword`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ shortCode, password }),
