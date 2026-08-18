@@ -1,3 +1,4 @@
+import { API_BASE } from "../../../config/apiBase";
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
@@ -51,7 +52,10 @@ const GuestDownload = () => {
           toast.info("🔒 This file is password protected. Please enter the password.");
         }
       } catch (err) {
-        if (err.name !== "AbortError") setError(err.message);
+        if (err.name !== "AbortError") {
+          setError(err.message === "Failed to fetch" ? "Could not reach the server. Please try again." : err.message);
+          setIsLoading(false);
+        }
       }
     };
     fetchFile();
