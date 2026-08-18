@@ -1,8 +1,8 @@
 import axios from "axios";
 
-const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-const DEFAULT_MODEL = "deepseek/deepseek-chat-v3-0324:free";
-const VISION_MODEL = "google/gemini-2.0-flash-exp:free";
+const OPENROUTER_URL = "https://opencode.ai/inference/openai/v1/chat/completions";
+const DEFAULT_MODEL = "deepseek-v4-flash";
+const VISION_MODEL = "deepseek-v4-flash";
 
 const DOC_TYPES = ["academic", "code", "legal", "invoice", "image", "other"];
 const RISKS = ["LOW", "MEDIUM", "HIGH"];

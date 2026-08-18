@@ -42,8 +42,30 @@ const registerUser = async (req, res) => {
     const profilePic = `https://avatar.iran.liara.run/public/${pic}`;
 
     const newUser = new User({ fullname, username, email, password, profilePic });
+    newUser.lastLogin = new Date();
     await newUser.save();
-    return res.status(201).json({ message: "User registered successfully." });
+
+    const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET, { expiresIn: "24h" });
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "Strict",
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+
+    return res.status(201).json({
+      message: "User registered successfully.",
+      token,
+      user: {
+        id: newUser._id,
+        fullname: newUser.fullname,
+        username: newUser.username,
+        email: newUser.email,
+        profilePic: newUser.profilePic,
+        lastLogin: newUser.lastLogin,
+      },
+    });
   } catch (error) {
     console.error("Error during registration:", error);
     return res.status(500).json({ message: "Error during registration" });
