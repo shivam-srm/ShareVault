@@ -51,22 +51,36 @@ const uploadFiles = async (req, res) => {
       const fileUrl = s3Result.Location;
       const shortCode = shortid.generate();
 
+      const isExp = hasExpiry === 'true' || hasExpiry === true;
+      let calculatedExpiry = null;
+      if (isExp) {
+        if (expiresAt && !isNaN(Number(expiresAt)) && Number(expiresAt) > 0) {
+          calculatedExpiry = new Date(Date.now() + Number(expiresAt) * 3600000);
+        } else if (expiresAt && !isNaN(new Date(expiresAt).getTime())) {
+          calculatedExpiry = new Date(expiresAt);
+        } else {
+          calculatedExpiry = new Date(Date.now() + 24 * 3600000);
+        }
+      } else {
+        calculatedExpiry = new Date(Date.now() + 10 * 24 * 3600000);
+      }
+
       const fileObj = {
         path: fileUrl,
         name: finalFileName,
-        type: file.mimetype,
+        type: file.mimetype || 'application/octet-stream',
         size: file.size,
-        hasExpiry: hasExpiry === 'true',
-        expiresAt: hasExpiry === 'true'
-          ? new Date(Date.now() + expiresAt * 3600000)
-          : new Date(Date.now() + 10 * 24 * 3600000),
+        hasExpiry: isExp,
+        expiresAt: calculatedExpiry,
         status: 'active',
         shortUrl: `/f/${shortCode}`,
         createdBy: userId,
+        isPasswordProtected: false,
       };
 
-      if (isPassword === 'true') {
-        const hashedPassword = await bcrypt.hash(password, 10);
+      const isPwd = (isPassword === 'true' || isPassword === true) && password && typeof password === 'string' && password.trim().length > 0;
+      if (isPwd) {
+        const hashedPassword = await bcrypt.hash(password.trim(), 10);
         fileObj.password = hashedPassword;
         fileObj.isPasswordProtected = true;
       }
@@ -130,22 +144,36 @@ const uploadFilesGuest = async (req, res) => {
 
               const username = shortid.generate();
 
+              const isExp = hasExpiry === 'true' || hasExpiry === true;
+              let calculatedExpiry = null;
+              if (isExp) {
+                if (expiresAt && !isNaN(Number(expiresAt)) && Number(expiresAt) > 0) {
+                  calculatedExpiry = new Date(Date.now() + Number(expiresAt) * 3600000);
+                } else if (expiresAt && !isNaN(new Date(expiresAt).getTime())) {
+                  calculatedExpiry = new Date(expiresAt);
+                } else {
+                  calculatedExpiry = new Date(Date.now() + 24 * 3600000);
+                }
+              } else {
+                calculatedExpiry = new Date(Date.now() + 10 * 24 * 3600000);
+              }
+
               const fileObj = {
                 path: fileUrl,
                 name: finalFileName,
-                type: file.mimetype,
+                type: file.mimetype || 'application/octet-stream',
                 size: file.size,
-                hasExpiry: hasExpiry === 'true',
-                expiresAt: hasExpiry === 'true'
-                  ? new Date(Date.now() + expiresAt * 3600000)
-                  : new Date(Date.now() + 10 * 24 * 3600000),
+                hasExpiry: isExp,
+                expiresAt: calculatedExpiry,
                 status: 'active',
                 shortUrl: `/g/${shortCode}`,
                 createdBy: `guest_${username}`,
+                isPasswordProtected: false,
               };
 
-              if (isPassword === 'true') {
-                const hashedPassword = await bcrypt.hash(password, 10);
+              const isPwd = (isPassword === 'true' || isPassword === true) && password && typeof password === 'string' && password.trim().length > 0;
+              if (isPwd) {
+                const hashedPassword = await bcrypt.hash(password.trim(), 10);
                 fileObj.password = hashedPassword;
                 fileObj.isPasswordProtected = true;
               }
@@ -235,6 +263,20 @@ const downloadInfo = async (req, res) => {
     const command = new GetObjectCommand(params);
     const downloadUrl = await getSignedUrl(s3, command, { expiresIn: 24 * 60 * 60 }); // 24 hours
 
+    // Generate inline preview URL for browser rendering
+    const previewCommand = new GetObjectCommand({
+      Bucket: process.env.AWS_BUCKET_NAME,
+      Key: `file-share-app/${file.name}`,
+      ResponseContentType: file.type || 'application/octet-stream',
+      ResponseContentDisposition: 'inline',
+    });
+    let previewUrl = downloadUrl;
+    try {
+      previewUrl = await getSignedUrl(s3, previewCommand, { expiresIn: 24 * 60 * 60 });
+    } catch (err) {
+      console.error("Preview URL generation error:", err);
+    }
+
     file.downloadedContent++;
     await file.save();
 
@@ -247,11 +289,12 @@ const downloadInfo = async (req, res) => {
 
     return res.status(200).json({
       downloadUrl,
+      previewUrl,
       id: file._id,
       name: file.name,
       size: file.size,
       type: file.type || 'file',
-      path: file.path,
+      path: previewUrl,
       isPasswordProtected: file.isPasswordProtected || false,
       expiresAt: file.expiresAt || null,
       status: file.status || 'active',
@@ -300,17 +343,31 @@ const guestDownloadInfo = async (req, res) => {
     const command = new GetObjectCommand(params);
     const downloadUrl = await getSignedUrl(s3, command, { expiresIn: 24 * 60 * 60 });
 
+    // Generate inline preview URL for browser rendering
+    const previewCommand = new GetObjectCommand({
+      Bucket: process.env.AWS_BUCKET_NAME,
+      Key: `file-share-app/${file.name}`,
+      ResponseContentType: file.type || 'application/octet-stream',
+      ResponseContentDisposition: 'inline',
+    });
+    let previewUrl = downloadUrl;
+    try {
+      previewUrl = await getSignedUrl(s3, previewCommand, { expiresIn: 24 * 60 * 60 });
+    } catch (err) {
+      console.error("Preview URL generation error for guest:", err);
+    }
+
     file.downloadedContent++;
     await file.save();
 
-
     return res.status(200).json({
       downloadUrl,
+      previewUrl,
       id: file._id,
       name: file.name,
       size: file.size,
       type: file.type || 'file',
-      path: file.path,
+      path: previewUrl,
       isPasswordProtected: file.isPasswordProtected || false,
       expiresAt: file.expiresAt || null,
       status: file.status || 'active',

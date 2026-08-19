@@ -1,94 +1,97 @@
 import React, { useState, useRef, useEffect } from "react";
-import { FiSend, FiX, FiMinus, FiMaximize2, FiCpu } from "react-icons/fi";
+import { FiSend, FiX, FiMinus, FiMaximize2 } from "react-icons/fi";
 import ReactMarkdown from "react-markdown";
 import axiosInstance from "../../config/axiosInstance";
+import AIIcon from "../AIIcon";
 
-const GREETING = {
-  role: "assistant",
-  content:
-    "Hi! I'm the **Vault Assistant**. Ask me anything about ShareVault — secure sharing, link expiry, or AI document analysis.",
-};
+const STARTER_MESSAGES = [
+  {
+    role: "assistant",
+    content:
+      "Hi! I'm the **Vault Assistant**. Ask me anything about ShareVault — secure sharing, link expiry, or AI document analysis.",
+  },
+];
 
 const SUGGESTIONS = [
   "What is ShareVault?",
-  "How does AI document analysis work?",
-  "Is sharing secure?",
+  "How does password protection work?",
+  "What file types can AI analyze?",
+  "How long do free links last?",
 ];
 
 const PublicAssistant = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [message, setMessage] = useState("");
-  const [chat, setChat] = useState([GREETING]);
+  const [chat, setChat] = useState(STARTER_MESSAGES);
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef(null);
-  const inputRef = useRef(null);
 
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [chat, loading]);
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [chat]);
 
-  useEffect(() => {
-    if (isOpen && !isMinimized) inputRef.current?.focus();
-  }, [isOpen, isMinimized]);
+  const handleSend = async (text) => {
+    const query = (typeof text === "string" ? text : message).trim();
+    if (!query || loading) return;
 
-  const send = async (text) => {
-    const value = (text ?? message).trim();
-    if (!value || loading) return;
-
-    const history = chat.filter((m) => m !== GREETING).slice(-6);
-    setChat((prev) => [...prev, { role: "user", content: value }]);
+    const userMsg = { role: "user", content: query };
+    setChat((prev) => [...prev, userMsg]);
     setMessage("");
     setLoading(true);
 
     try {
-      const res = await axiosInstance.post("/ai/public-chat", { message: value, history });
-      setChat((prev) => [...prev, { role: "assistant", content: res.data.message }]);
+      const history = chat.slice(-6);
+      const res = await axiosInstance.post("/ai/public-chat", {
+        message: query,
+        history,
+      });
+      const aiContent = res.data?.message || "I couldn't generate a response. Please try again.";
+      setChat((prev) => [...prev, { role: "assistant", content: aiContent }]);
     } catch (err) {
-      const msg =
-        err?.response?.data?.error ||
-        "I'm having trouble connecting right now. Please try again in a moment.";
-      setChat((prev) => [...prev, { role: "assistant", content: msg }]);
+      const errText =
+        err.response?.data?.error ||
+        "I'm having trouble connecting right now. Please try again shortly.";
+      setChat((prev) => [...prev, { role: "assistant", content: errText }]);
     } finally {
       setLoading(false);
-      inputRef.current?.focus();
     }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    send();
+    handleSend();
   };
 
   if (!isOpen) {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-[60] w-14 h-14 rounded-2xl bg-[var(--gradient-aurora)] shadow-[var(--shadow-glow)] flex items-center justify-center text-white text-2xl hover:scale-110 transition-transform"
+        className="fixed bottom-6 right-6 z-[60] w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 shadow-[0_0_25px_rgba(99,102,241,0.6)] flex items-center justify-center text-white hover:scale-110 hover:shadow-[0_0_35px_rgba(139,92,246,0.8)] transition-all animate-float border border-white/20"
         title="Ask the Vault Assistant"
         aria-label="Open Vault Assistant chat"
       >
-        <FiCpu />
+        <AIIcon size={36} />
       </button>
     );
   }
 
   return (
     <div
-      className={`fixed bottom-6 right-6 z-[60] glass-strong border border-white/10 rounded-3xl shadow-[var(--shadow-elevated)] transition-all duration-300 overflow-hidden flex flex-col ${
+      className={`fixed bottom-6 right-6 z-[60] glass-strong border border-white/15 rounded-3xl shadow-[var(--shadow-elevated)] transition-all duration-300 overflow-hidden flex flex-col ${
         isMinimized ? "w-64 h-14" : "w-[calc(100vw-3rem)] max-w-[380px] h-[500px]"
       }`}
     >
-      <div className="p-4 bg-white/5 border-b border-white/10 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-[var(--gradient-aurora)] flex items-center justify-center text-white">
-            <FiCpu />
-          </div>
+      <div className="p-3.5 sm:p-4 bg-white/[0.04] border-b border-white/10 flex items-center justify-between shrink-0 backdrop-blur-md">
+        <div className="flex items-center gap-3">
+          <AIIcon size={32} />
           <div>
-            <h3 className="text-sm font-bold font-display">Vault Assistant</h3>
+            <h3 className="text-sm font-bold text-white tracking-wide">Vault Assistant</h3>
             {!isMinimized && (
-              <span className="text-[10px] text-emerald-400 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Online
+              <span className="text-[11px] text-emerald-400 flex items-center gap-1.5 font-medium">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]" /> Online
               </span>
             )}
           </div>

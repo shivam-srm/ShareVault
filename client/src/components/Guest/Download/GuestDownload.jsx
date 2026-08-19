@@ -39,7 +39,7 @@ const GuestDownload = () => {
     const controller = new AbortController();
     const fetchFile = async () => {
       try {
-        const res = await fetch(`http://localhost:6600/api/files/g/${shortCode}`, {
+        const res = await fetch(`/api/files/g/${shortCode}`, {
           signal: controller.signal,
         });
         if (!res.ok) throw new Error("File not found");
@@ -73,7 +73,7 @@ const GuestDownload = () => {
       return;
     }
     try {
-      const res = await fetch(`http://localhost:6600/api/files/verifyGuestFilePassword`, {
+      const res = await fetch(`/api/files/verifyGuestFilePassword`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ shortCode, password }),

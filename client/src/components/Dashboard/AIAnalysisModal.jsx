@@ -21,6 +21,8 @@ import {
   resetAI,
 } from "../../redux/slice/ai/aiSlice";
 
+import AIIcon from "../AIIcon";
+
 const RISK_STYLES = {
   LOW: "text-emerald-300 border-emerald-400/30 bg-emerald-500/10",
   MEDIUM: "text-amber-300 border-amber-400/30 bg-amber-500/10",
@@ -94,16 +96,21 @@ const AIAnalysisModal = ({ isOpen, fileId, fileName, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
-      <div className="glass-strong border border-white/10 rounded-3xl shadow-[var(--shadow-elevated)] w-full max-w-3xl max-h-[92vh] flex flex-col animate-fade-in overflow-hidden">
+    <div
+      className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm overflow-y-auto flex items-center justify-center p-3 sm:p-6"
+      onClick={(e) => e.target === e.currentTarget && onClose?.()}
+    >
+      <div
+        className="glass-strong border border-white/15 rounded-3xl shadow-[var(--shadow-elevated)] w-full max-w-3xl h-[85vh] max-h-[85vh] flex flex-col my-auto animate-fade-in overflow-hidden relative"
+      >
         {/* Header */}
-        <div className="p-4 sm:p-6 border-b border-white/10 flex items-start justify-between gap-3">
+        <div className="p-4 sm:p-6 border-b border-white/10 flex items-start justify-between gap-3 shrink-0 bg-white/[0.02]">
           <div className="flex items-start gap-3 min-w-0">
-            <div className="w-10 h-10 shrink-0 rounded-xl bg-[var(--gradient-aurora)] shadow-[var(--shadow-glow)] flex items-center justify-center text-white">
-              <FiCpu size={20} />
+            <div className="w-11 h-11 shrink-0 rounded-2xl bg-[var(--gradient-aurora)]/20 border border-indigo-400/30 shadow-[0_0_20px_rgba(99,102,241,0.35)] flex items-center justify-center">
+              <AIIcon size={26} />
             </div>
             <div className="min-w-0">
-              <h2 className="text-lg sm:text-xl font-bold font-display text-[var(--text-color)]">
+              <h2 className="text-lg sm:text-xl font-bold font-display text-white">
                 AI Document Analysis
               </h2>
               <p className="text-xs text-[var(--text-muted,#94a3b8)] break-all">{fileName}</p>
@@ -119,7 +126,7 @@ const AIAnalysisModal = ({ isOpen, fileId, fileName, onClose }) => {
         </div>
 
         {/* Action bar */}
-        <div className="px-4 sm:px-6 py-3 border-b border-white/10 flex flex-wrap items-center gap-3">
+        <div className="px-4 sm:px-6 py-3 border-b border-white/10 flex flex-wrap items-center gap-3 shrink-0 bg-white/[0.01]">
           <button
             onClick={runAnalysis}
             disabled={analyzing || loading}
@@ -161,7 +168,7 @@ const AIAnalysisModal = ({ isOpen, fileId, fileName, onClose }) => {
         </div>
 
         {/* Tabs */}
-        <div className="px-4 sm:px-6 pt-4 flex gap-2 overflow-x-auto">
+        <div className="px-4 sm:px-6 pt-4 pb-2 flex gap-2 overflow-x-auto shrink-0 border-b border-white/5">
           {TABS.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
@@ -177,8 +184,11 @@ const AIAnalysisModal = ({ isOpen, fileId, fileName, onClose }) => {
           ))}
         </div>
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+        {/* Scrollable Body */}
+        <div
+          className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-4"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
           {error && !analyzing && (
             <div className="p-3 rounded-xl border border-red-400/30 bg-red-500/10 text-sm text-red-200">
               {error}
@@ -232,7 +242,7 @@ const AIAnalysisModal = ({ isOpen, fileId, fileName, onClose }) => {
               <div className="text-center py-12 text-sm text-[var(--text-muted,#94a3b8)]">
                 {analyzing
                   ? "AI is analyzing this document…"
-                  : "Run “Analyze Document” to generate a summary, document type and keywords."}
+                  : 'Run "Analyze Document" to generate a summary, document type and keywords.'}
               </div>
             )
           )}

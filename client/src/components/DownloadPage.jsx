@@ -16,7 +16,7 @@ const DownloadPage = () => {
     const controller = new AbortController();
     const fetchFile = async () => {
       try {
-        const res = await fetch(`http://localhost:6600/api/files/f/${shortCode}`, {
+        const res = await fetch(`/api/files/f/${shortCode}`, {
           signal: controller.signal,
         });
         if (!res.ok) throw new Error("File not found");
@@ -50,7 +50,7 @@ const DownloadPage = () => {
       return;
     }
     try {
-      const res = await fetch(`http://localhost:6600/api/files/verifyFilePassword`, {
+      const res = await fetch(`/api/files/verifyFilePassword`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ shortCode, password }),
@@ -104,23 +104,45 @@ const DownloadPage = () => {
                 <p className="text-[var(--text-muted,#94a3b8)] text-sm mt-1">Verify the password to preview or download.</p>
               </div>
             ) : (
-              <div className="rounded-2xl overflow-hidden bg-black/30 border border-white/10">
-                {file.type.startsWith("image/") && (
-                  <img src={file.path} alt={file.name} className="w-full h-auto" />
+              <div className="rounded-2xl overflow-hidden bg-black/40 border border-white/10 flex items-center justify-center min-h-[220px] p-2">
+                {(file.type?.startsWith("image/") || /\.(png|jpe?g|webp|gif|svg|ico)$/i.test(file.name)) && (
+                  <img
+                    src={file.previewUrl || file.path}
+                    alt={file.name}
+                    className="max-w-full max-h-[500px] object-contain rounded-xl shadow-md mx-auto"
+                    loading="lazy"
+                  />
                 )}
-                {file.type.startsWith("video/") && (
-                  <video controls className="w-full h-auto">
-                    <source src={file.path} type={file.type} />
+                {(file.type?.startsWith("video/") || /\.(mp4|webm|ogg|mov|mkv|avi)$/i.test(file.name)) && (
+                  <video controls className="w-full max-h-[480px] rounded-xl">
+                    <source src={file.previewUrl || file.path} type={file.type} />
+                    Your browser does not support video playback.
                   </video>
                 )}
-                {file.type.startsWith("audio/") && (
+                {(file.type?.startsWith("audio/") || /\.(mp3|wav|ogg|m4a)$/i.test(file.name)) && (
                   <audio controls className="w-full p-4">
-                    <source src={file.path} type={file.type} />
+                    <source src={file.previewUrl || file.path} type={file.type} />
+                    Your browser does not support audio playback.
                   </audio>
                 )}
-                {file.type === "application/pdf" && (
-                  <iframe src={file.path} title="PDF Preview" className="w-full h-[420px]" />
+                {(file.type === "application/pdf" || /\.pdf$/i.test(file.name)) && (
+                  <iframe
+                    src={file.previewUrl || file.path}
+                    title="PDF Preview"
+                    className="w-full h-[500px] rounded-xl border-0"
+                  />
                 )}
+                {!file.type?.startsWith("image/") &&
+                  !file.type?.startsWith("video/") &&
+                  !file.type?.startsWith("audio/") &&
+                  file.type !== "application/pdf" &&
+                  !/\.(png|jpe?g|webp|gif|svg|ico|mp4|webm|ogg|mov|mkv|avi|mp3|wav|m4a|pdf)$/i.test(file.name) && (
+                    <div className="p-8 text-center text-[var(--text-muted,#94a3b8)]">
+                      <FiFileText size={48} className="mx-auto mb-2 text-[var(--primary-text)] opacity-80" />
+                      <p className="text-sm font-medium text-[var(--text-color)]">Preview not available for this file format</p>
+                      <p className="text-xs mt-1">Click below to download the file directly.</p>
+                    </div>
+                  )}
               </div>
             )}
           </div>

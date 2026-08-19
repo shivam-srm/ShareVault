@@ -1,8 +1,8 @@
 import axios from "axios";
 
-const OPENROUTER_URL = "https://opencode.ai/inference/openai/v1/chat/completions";
-const DEFAULT_MODEL = "deepseek-v4-flash";
-const VISION_MODEL = "deepseek-v4-flash";
+const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+const DEFAULT_MODEL = "nvidia/nemotron-3-nano-30b-a3b:free";
+const VISION_MODEL = "nvidia/nemotron-nano-12b-v2-vl:free";
 
 const DOC_TYPES = ["academic", "code", "legal", "invoice", "image", "other"];
 const RISKS = ["LOW", "MEDIUM", "HIGH"];

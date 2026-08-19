@@ -56,27 +56,45 @@ const GuestFileUpload = ({guestFiles, updateFiles}) => {
   const totalSize = files.reduce((acc, file) => acc + file.size, 0);
 
   const handleUpload = async () => {
-    setLoading(true);
     if (files.length === 0) {
       toast.error("Please upload at least one file.");
-      setLoading(false);
       return;
     }
 
-    const formData = new FormData();
-    files.forEach((file) => formData.append("files", file));
-    formData.append("hasExpiry", enableExpiry);
-
-    if (enableExpiry && expiryDate) {
-      const hours = Math.ceil(
-        (new Date(expiryDate) - new Date()) / (1000 * 60 * 60)
-      );
-      formData.append("expiresAt", hours);
+    if (enablePassword && (!password || !password.trim())) {
+      toast.error("Please enter a password or turn off the password toggle.");
+      return;
     }
 
-    formData.append("isPassword", enablePassword);
-    if (enablePassword && password) {
-      formData.append("password", password);
+    if (enableExpiry) {
+      if (!expiryDate) {
+        toast.error("Please select an expiry date or turn off the expiry toggle.");
+        return;
+      }
+      const diffMs = new Date(expiryDate).getTime() - Date.now();
+      if (diffMs <= 0) {
+        toast.error("Expiry date must be in the future.");
+        return;
+      }
+    }
+
+    setLoading(true);
+
+    const formData = new FormData();
+    files.forEach((file) => formData.append("files", file));
+    formData.append("hasExpiry", enableExpiry ? "true" : "false");
+
+    if (enableExpiry && expiryDate) {
+      const hours = Math.max(
+        1,
+        Math.ceil((new Date(expiryDate).getTime() - Date.now()) / (1000 * 60 * 60))
+      );
+      formData.append("expiresAt", String(hours));
+    }
+
+    formData.append("isPassword", enablePassword ? "true" : "false");
+    if (enablePassword && password && password.trim()) {
+      formData.append("password", password.trim());
     }
 
     try {
@@ -93,10 +111,9 @@ const GuestFileUpload = ({guestFiles, updateFiles}) => {
         updateFiles(updatedFiles); // ✅ directly update parent state and localStorage
         setFiles([]);
         setLoading(false);
-        // window.location.reload();
       }
     } catch (err) {
-      toast.error(err?.error || "Upload failed");
+      toast.error(err?.response?.data?.message || err?.response?.data?.error || err?.error || "Upload failed");
       setLoading(false);
     }
   };

@@ -14,7 +14,7 @@ const authenticate = (req, res, next) => {
     req.user = decoded; // You can access this in your controllers via req.user.userId
     next();
   } catch (err) {
-    return res.status(400).json({ message: "Invalid or expired token." });
+    return res.status(401).json({ message: "Invalid or expired token." });
   }
 };
 

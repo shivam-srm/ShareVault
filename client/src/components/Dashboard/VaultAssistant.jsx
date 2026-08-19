@@ -4,6 +4,8 @@ import axiosInstance from "../../config/axiosInstance";
 import { toast } from "react-toastify";
 import ReactMarkdown from "react-markdown";
 
+import AIIcon from "../AIIcon";
+
 const VaultAssistant = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -89,8 +91,10 @@ const VaultAssistant = () => {
       setChat(prev => [...prev, { role: "assistant", content: aiContent.replace(/ACTION:[A-Z]+:[a-zA-Z0-9]+/g, "").trim() }]);
     } catch (err) {
       console.error(err);
-      toast.error("Assistant connection error. Please try again later.");
-      setChat(prev => [...prev, { role: "assistant", content: "I'm having trouble connecting right now. Please check back in a moment." }]);
+      const serverMsg = err?.response?.data?.error || err?.response?.data?.message;
+      const displayMsg = serverMsg || "I'm having trouble connecting right now. Please check back in a moment.";
+      toast.error(serverMsg || "Assistant connection error. Please try again later.");
+      setChat(prev => [...prev, { role: "assistant", content: displayMsg }]);
     } finally {
       setLoading(false);
     }
@@ -100,29 +104,31 @@ const VaultAssistant = () => {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-[60] w-14 h-14 rounded-2xl bg-[var(--gradient-aurora)] shadow-[var(--shadow-glow)] flex items-center justify-center text-white text-2xl hover:scale-110 transition-transform animate-float"
+        className="fixed bottom-6 right-6 z-[60] w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 shadow-[0_0_25px_rgba(99,102,241,0.6)] flex items-center justify-center text-white hover:scale-110 hover:shadow-[0_0_35px_rgba(139,92,246,0.8)] transition-all animate-float border border-white/20"
         title="Open Vault Assistant"
       >
-        <FiCpu />
+        <AIIcon size={36} />
       </button>
     );
   }
 
   return (
     <div 
-      className={`fixed bottom-6 right-6 z-[60] glass-strong border border-white/10 rounded-3xl shadow-[var(--shadow-elevated)] transition-all duration-300 overflow-hidden flex flex-col ${
+      className={`fixed bottom-6 right-6 z-[60] glass-strong border border-white/15 rounded-3xl shadow-[var(--shadow-elevated)] transition-all duration-300 overflow-hidden flex flex-col ${
         isMinimized ? 'w-64 h-14' : 'w-full max-w-[400px] h-[500px]'
       }`}
     >
       {/* Header */}
-      <div className="p-4 bg-white/5 border-b border-white/10 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-[var(--gradient-aurora)] flex items-center justify-center text-white">
-            <FiCpu />
-          </div>
+      <div className="p-3.5 sm:p-4 bg-white/[0.04] border-b border-white/10 flex items-center justify-between backdrop-blur-md">
+        <div className="flex items-center gap-3">
+          <AIIcon size={32} />
           <div>
-            <h3 className="text-sm font-bold font-display">Vault Assistant</h3>
-            {!isMinimized && <span className="text-[10px] text-emerald-400 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"/> Online</span>}
+            <h3 className="text-sm font-bold text-white tracking-wide">Vault Assistant</h3>
+            {!isMinimized && (
+              <span className="text-[11px] text-emerald-400 flex items-center gap-1.5 font-medium">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]"/> Online
+              </span>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2 text-[var(--text-muted)]">
